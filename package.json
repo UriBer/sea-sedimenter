@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "description": "IMU-based shipboard weighing measurement PWA",
   "type": "module",
+  "author": "Uri Berman <https://even-derech-it.com>",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uriber/sea-sedimenter.git"
+  },
+  "homepage": "https://github.com/uriber/sea-sedimenter#readme",
   "scripts": {
     "dev": "vite",
     "dev:http": "VITE_HTTPS=false vite",

@@ -1,4 +1,5 @@
 import type { LiveMetrics } from '../types';
+import { i18n } from '../utils/i18n';
 
 export class Metrics {
   private container: HTMLElement;
@@ -15,47 +16,47 @@ export class Metrics {
   constructor(container: HTMLElement) {
     this.container = container;
     this.render();
+    window.addEventListener('languagechange', () => this.render());
   }
 
   private render(): void {
     this.container.innerHTML = `
       <div class="metrics-panel">
-        <h3>Live Metrics</h3>
         <div class="metrics-grid">
           <div class="metric-item">
-            <label>a_z (m/s²)</label>
+            <label>${i18n.t('az')}</label>
             <span id="metric-az" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>Roll (°)</label>
+            <label>${i18n.t('roll')}</label>
             <span id="metric-roll" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>Pitch (°)</label>
+            <label>${i18n.t('pitch')}</label>
             <span id="metric-pitch" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>RMS a_z (m/s²)</label>
+            <label>${i18n.t('rmsAz')}</label>
             <span id="metric-rms-az" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>RMS Roll (°)</label>
+            <label>${i18n.t('rmsRoll')}</label>
             <span id="metric-rms-roll" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>RMS Pitch (°)</label>
+            <label>${i18n.t('rmsPitch')}</label>
             <span id="metric-rms-pitch" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>Sampling Rate (Hz)</label>
+            <label>${i18n.t('samplingRate')}</label>
             <span id="metric-sampling-rate" class="metric-value">--</span>
           </div>
           <div class="metric-item">
-            <label>Confidence</label>
+            <label>${i18n.t('confidence')}</label>
             <span id="metric-confidence" class="metric-value">--</span>
           </div>
         </div>
-        <div id="stability-badge" class="stability-badge">NOT STABLE</div>
+        <div id="stability-badge" class="stability-badge">${i18n.t('notStable')}</div>
       </div>
     `;
 
@@ -92,13 +93,13 @@ export class Metrics {
     this.rms_rollEl.textContent = metrics.rms_roll.toFixed(2);
     this.rms_pitchEl.textContent = metrics.rms_pitch.toFixed(2);
     this.samplingRateEl.textContent = metrics.samplingRate.toFixed(1);
-    this.confidenceEl.textContent = (metrics.confidence * 100).toFixed(1) + '%';
+    this.confidenceEl.textContent = (metrics.confidence * 100).toFixed(1) + i18n.t('percent');
 
     if (metrics.isStable) {
-      this.stabilityBadge.textContent = 'MEASURE OK';
+      this.stabilityBadge.textContent = i18n.t('measureOk');
       this.stabilityBadge.className = 'stability-badge stable';
     } else {
-      this.stabilityBadge.textContent = 'NOT STABLE';
+      this.stabilityBadge.textContent = i18n.t('notStable');
       this.stabilityBadge.className = 'stability-badge not-stable';
     }
   }

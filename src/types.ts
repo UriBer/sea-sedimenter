@@ -111,3 +111,14 @@ export interface SensorStatus {
   error: string | null;
 }
 
+export interface MeasurementHistoryEntry {
+  id: string;
+  batchNumber: string;
+  timestamp: number; // Unix timestamp
+  dateTime: string; // Formatted date/time string
+  result: MeasurementResult;
+  scaleReading: number;
+  bias: number;
+  motionCorrectionEnabled: boolean;
+}
+

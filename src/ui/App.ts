@@ -6,7 +6,11 @@ import { Controls } from './Controls';
 import { Metrics } from './Metrics';
 import { SessionView } from './SessionView';
 import { ResultCard } from './ResultCard';
-import { DebugView } from './DebugView';
+import { History } from './History';
+import { LanguageSelector } from './LanguageSelector';
+import { Help } from './Help';
+import { HistoryStorage } from '../utils/storage';
+import { i18n } from '../utils/i18n';
 import { DEFAULT_CONFIG } from '../utils/config';
 import type { RawSensorData, ProcessedIMUData, LiveMetrics, MeasurementResult, Config } from '../types';
 
@@ -22,7 +26,9 @@ export class App {
   private metrics: Metrics;
   private sessionView: SessionView;
   private resultCard: ResultCard;
-  private debugView: DebugView;
+  private history: History;
+  private languageSelector: LanguageSelector;
+  private help: Help;
 
   // State
   private sensorsRunning = false;
@@ -35,8 +41,7 @@ export class App {
   private sampleMassInput: HTMLInputElement;
   private biasInput: HTMLInputElement;
   private motionCorrectionToggle: HTMLInputElement;
-  private gravityAlphaSlider: HTMLInputElement;
-  private configPanel: HTMLElement;
+  private batchNumberInput: HTMLInputElement;
 
   constructor() {
     this.config = { ...DEFAULT_CONFIG };
@@ -65,13 +70,35 @@ export class App {
       const bias = parseFloat(this.biasInput.value) || 0;
       const motionCorrection = this.motionCorrectionToggle.checked;
       const result = this.calculator.compute(sessionData, bias, motionCorrection);
+      this.resultCard.setMotionCorrection(motionCorrection);
       this.resultCard.show(result);
+      
+      // Save to history if reliable
+      if (result.isReliable) {
+        const batchNumber = this.batchNumberInput.value.trim() || HistoryStorage.getNextBatchNumber();
+        HistoryStorage.save({
+          batchNumber,
+          result,
+          scaleReading: this.getCurrentScaleReading(),
+          bias,
+          motionCorrectionEnabled: motionCorrection,
+        });
+        this.history.refresh();
+        // Auto-increment batch number for next measurement
+        // If user entered a manual number, try to increment it; otherwise use auto-generated
+        if (this.batchNumberInput.value.trim()) {
+          this.batchNumberInput.value = HistoryStorage.incrementBatchNumber(this.batchNumberInput.value);
+        } else {
+          this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
+        }
+      }
     });
 
     // Initialize UI
     this.initializeUI();
     this.setupEventListeners();
     this.updateUI();
+    this.updateUITexts(); // Initialize translated texts
   }
 
   private initializeUI(): void {
@@ -81,51 +108,58 @@ export class App {
     }
 
     // Get containers
+    const languageContainer = document.getElementById('language-container')!;
+    const helpContainer = document.getElementById('help-container')!;
     const controlsContainer = document.getElementById('controls-container')!;
     const metricsContainer = document.getElementById('metrics-container')!;
     const sessionContainer = document.getElementById('session-container')!;
     const resultContainer = document.getElementById('result-container')!;
-    const debugContainer = document.getElementById('debug-container')!;
+    const historyContainer = document.getElementById('history-container')!;
 
     // Create UI components
+    this.languageSelector = new LanguageSelector(languageContainer);
+    this.help = new Help(helpContainer);
     this.controls = new Controls(controlsContainer);
     this.metrics = new Metrics(metricsContainer);
     this.sessionView = new SessionView(sessionContainer);
     this.resultCard = new ResultCard(resultContainer);
-    this.debugView = new DebugView(debugContainer);
+    this.history = new History(historyContainer);
+
+    // Listen for language changes to update UI
+    window.addEventListener('languagechange', () => {
+      this.updateUITexts();
+    });
 
     // Get input elements
     this.scaleInput = document.getElementById('scale-reading') as HTMLInputElement;
     this.sampleMassInput = document.getElementById('sample-mass') as HTMLInputElement;
     this.biasInput = document.getElementById('bias') as HTMLInputElement;
     this.motionCorrectionToggle = document.getElementById('motion-correction') as HTMLInputElement;
-    this.gravityAlphaSlider = document.getElementById('gravity-alpha') as HTMLInputElement;
-    this.configPanel = document.getElementById('config-panel')!;
+    this.batchNumberInput = document.getElementById('batch-number') as HTMLInputElement;
 
     // Set defaults
     this.scaleInput.value = '0';
     this.sampleMassInput.value = this.config.sample_mass_default.toString();
     this.biasInput.value = '0';
     this.motionCorrectionToggle.checked = true;
-    this.gravityAlphaSlider.value = this.config.gravity_filter_alpha.toString();
-    this.gravityAlphaSlider.min = '0.90';
-    this.gravityAlphaSlider.max = '0.98';
-    this.gravityAlphaSlider.step = '0.01';
+    this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
 
-    // Update gravity alpha display
-    const updateAlphaLabel = () => {
-      const alpha = parseFloat(this.gravityAlphaSlider.value);
-      const label = document.getElementById('gravity-alpha-label')!;
-      label.textContent = `Gravity Filter Alpha: ${alpha.toFixed(2)}`;
-    };
-    updateAlphaLabel(); // Set initial label
-    
-    this.gravityAlphaSlider.addEventListener('input', () => {
-      const alpha = parseFloat(this.gravityAlphaSlider.value);
-      this.config.gravity_filter_alpha = alpha;
-      this.imuProcessor.updateConfig({ gravity_filter_alpha: alpha });
-      updateAlphaLabel();
-    });
+    // Setup batch number reset button
+    const resetBatchBtn = document.getElementById('btn-reset-batch') as HTMLButtonElement;
+    if (resetBatchBtn) {
+      resetBatchBtn.title = i18n.t('resetToAuto');
+      resetBatchBtn.addEventListener('click', () => {
+        this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
+        this.batchNumberInput.focus();
+      });
+      // Update button title on language change
+      window.addEventListener('languagechange', () => {
+        resetBatchBtn.title = i18n.t('resetToAuto');
+      });
+    }
+
+    // Initialize history
+    this.history.refresh();
   }
 
   private setupEventListeners(): void {
@@ -150,7 +184,6 @@ export class App {
     const started = this.sensorManager.start((rawData) => {
       this.currentRawData = rawData;
       this.imuProcessor.process(rawData);
-      this.debugView.update(rawData, this.currentProcessedData);
     });
 
     if (started) {
@@ -171,7 +204,10 @@ export class App {
   }
 
   private handleStartMeasure(): void {
-    if (!this.sensorsRunning) return;
+    const motionCorrectionEnabled = this.motionCorrectionToggle?.checked ?? true;
+    // If motion correction is enabled, we need sensors running
+    if (motionCorrectionEnabled && !this.sensorsRunning) return;
+    
     this.sessionManager.start();
     this.sessionActive = true;
     this.resultCard.hide();
@@ -227,9 +263,54 @@ export class App {
     document.body.insertBefore(warning, document.body.firstChild);
   }
 
+  private updateUITexts(): void {
+    // Update header
+    const header = document.querySelector('.app-header h1');
+    const subtitle = document.querySelector('.app-header .subtitle');
+    if (header) header.textContent = i18n.t('appName');
+    if (subtitle) subtitle.textContent = i18n.t('subtitle');
+
+    // Update input section title
+    const inputTitle = document.getElementById('input-section-title');
+    if (inputTitle) inputTitle.textContent = i18n.t('measurementInput');
+
+    // Update input labels
+    const batchLabel = document.querySelector('label[for="batch-number"]');
+    const scaleLabel = document.querySelector('label[for="scale-reading"]');
+    const sampleMassLabel = document.querySelector('label[for="sample-mass"]');
+    const biasLabel = document.querySelector('label[for="bias"]');
+    const motionLabel = document.querySelector('label[for="motion-correction"]');
+    const batchInput = document.getElementById('batch-number') as HTMLInputElement;
+    
+    if (batchLabel) batchLabel.textContent = i18n.t('batchNumber');
+    if (scaleLabel) scaleLabel.textContent = i18n.t('scaleReading');
+    if (sampleMassLabel) sampleMassLabel.textContent = i18n.t('baseSampleWeight');
+    if (biasLabel) biasLabel.textContent = i18n.t('biasTare');
+    if (batchInput) {
+      batchInput.placeholder = i18n.t('autoGenerated');
+    }
+    const resetBatchBtn = document.getElementById('btn-reset-batch');
+    if (resetBatchBtn) {
+      resetBatchBtn.title = i18n.t('resetToAuto');
+    }
+    if (motionLabel) {
+      const checkbox = document.getElementById('motion-correction') as HTMLInputElement;
+      const isChecked = checkbox?.checked || false;
+      motionLabel.innerHTML = `<input type="checkbox" id="motion-correction" ${isChecked ? 'checked' : ''}> ${i18n.t('motionCorrection')}`;
+      // Re-attach event listener if needed
+      const newCheckbox = document.getElementById('motion-correction') as HTMLInputElement;
+      if (newCheckbox && this.motionCorrectionToggle) {
+        newCheckbox.checked = isChecked;
+      }
+    }
+  }
+
   private updateUI(): void {
     const status = this.sensorManager.getStatus();
-    this.controls.updateStatus(status, this.sessionActive);
+    // Allow MEASURE button when motion correction is disabled, even without sensors
+    const motionCorrectionEnabled = this.motionCorrectionToggle?.checked ?? true;
+    const canMeasure = status.sensorsRunning || !motionCorrectionEnabled;
+    this.controls.updateStatus(status, this.sessionActive, canMeasure);
     
     if (!this.sensorsRunning) {
       this.metrics.update(null);

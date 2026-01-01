@@ -4,58 +4,84 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="IMU-based shipboard weighing measurement tool">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0ea5e9">
   <link rel="manifest" href="/manifest.json">
-  <title>Sea Sedimenter - IMU Weighing Tool</title>
+  <title>Sea Sedimenter</title>
 </head>
 <body>
   <div class="app-container">
-    <header>
-      <h1>Sea Sedimenter</h1>
-      <p class="subtitle">IMU-Based Shipboard Weighing Measurement</p>
+    <header class="app-header">
+      <div class="header-top">
+        <div id="language-container" class="language-container"></div>
+        <div id="help-container" class="help-container"></div>
+      </div>
+      <h1>🌊 Sea Sedimenter</h1>
+      <p class="subtitle">Shipboard Weighing Measurement</p>
     </header>
 
-    <div id="controls-container"></div>
+    <div id="controls-container" class="controls-wrapper"></div>
 
     <div class="main-content">
-      <div class="input-section">
-        <h2>Inputs</h2>
-        <div class="input-group">
-          <label for="scale-reading">Scale Reading (grams)</label>
-          <input type="number" id="scale-reading" step="0.01" placeholder="0.00">
+      <!-- Input Section -->
+      <section class="input-card">
+        <h2 id="input-section-title">📝 Measurement Input</h2>
+        <div class="input-row">
+          <label for="batch-number">Batch Number</label>
+          <div class="batch-input-group">
+            <input type="text" id="batch-number" placeholder="Auto-generated">
+            <button id="btn-reset-batch" class="btn-icon-small" title="Reset to auto-generated">🔄</button>
+          </div>
         </div>
-        <div class="input-group">
-          <label for="sample-mass">Sample Mass Default (grams)</label>
-          <input type="number" id="sample-mass" step="1" value="150">
+        <div class="input-row">
+          <label for="scale-reading">Scale Reading (g)</label>
+          <input type="number" id="scale-reading" step="0.01" placeholder="0.00" class="input-large">
         </div>
-        <div class="input-group">
-          <label for="bias">Bias/Tare (grams)</label>
-          <input type="number" id="bias" step="0.01" value="0">
+        <div class="input-row-group">
+          <div class="input-row">
+            <label for="sample-mass">Base Sample Weight (g)</label>
+            <input type="number" id="sample-mass" step="0.01" value="150">
+          </div>
+          <div class="input-row">
+            <label for="bias">Bias/Tare (g)</label>
+            <input type="number" id="bias" step="0.01" value="0">
+          </div>
         </div>
-        <div class="input-group">
-          <label>
+        <div class="input-row">
+          <label for="motion-correction">
             <input type="checkbox" id="motion-correction" checked>
-            Enable Motion Correction
+            Motion Correction
           </label>
         </div>
-      </div>
+      </section>
 
-      <div id="config-panel" class="config-section">
-        <h2>Configuration</h2>
-        <div class="input-group">
-          <label id="gravity-alpha-label">Gravity Filter Alpha: 0.92</label>
-          <input type="range" id="gravity-alpha" min="0.90" max="0.98" step="0.01" value="0.92">
+      <!-- Status & Metrics -->
+      <section class="status-card">
+        <div id="metrics-container"></div>
+        <div id="session-container"></div>
+      </section>
+
+      <!-- Result -->
+      <section id="result-container"></section>
+
+      <!-- History -->
+      <section id="history-container"></section>
+    </div>
+
+    <!-- Footer / Attribution -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-attribution">
+          <p>Created by: <a href="https://even-derech-it.com" target="_blank" rel="noopener noreferrer">Uri Berman - Even-Derech-It.com</a></p>
+          <p class="footer-links">
+            <a href="https://github.com/uriber/sea-sedimenter" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub Repository</a>
+            <span class="footer-separator">•</span>
+            <a href="/LICENSE" target="_blank" rel="noopener noreferrer" class="footer-link">GNU GPL v3 License</a>
+          </p>
         </div>
       </div>
-
-      <div id="metrics-container"></div>
-      <div id="session-container"></div>
-      <div id="result-container"></div>
-      <div id="debug-container"></div>
-    </div>
+    </footer>
   </div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
-

@@ -2,6 +2,12 @@
 
 A single-page Progressive Web App (PWA) that uses device IMU sensors (accelerometer + gyroscope) to gate and correct shipboard weighing measurements, providing real-time motion analysis and uncertainty estimation.
 
+**Created by:** [Uri Berman - Even-Derech-It.com](https://even-derech-it.com)
+
+**License:** [GNU General Public License v3.0](LICENSE)
+
+**Repository:** [GitHub](https://github.com/uriber/sea-sedimenter)
+
 ## Features
 
 - **Real-time IMU Processing**: Continuous gravity estimation, vertical acceleration (a_z) calculation, and roll/pitch computation

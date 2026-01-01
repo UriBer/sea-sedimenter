@@ -1,4 +1,5 @@
 import type { SensorStatus } from '../types';
+import { i18n } from '../utils/i18n';
 
 export class Controls {
   private container: HTMLElement;
@@ -12,17 +13,21 @@ export class Controls {
   constructor(container: HTMLElement) {
     this.container = container;
     this.render();
+    this.updateTexts();
+    
+    // Listen for language changes
+    window.addEventListener('languagechange', () => this.updateTexts());
   }
 
   private render(): void {
     this.container.innerHTML = `
       <div class="controls-bar">
-        <button id="btn-enable" class="btn btn-primary">Enable Sensors</button>
-        <button id="btn-start" class="btn btn-primary" disabled>Start Sensors</button>
-        <button id="btn-stop" class="btn btn-secondary" disabled>Stop Sensors</button>
-        <button id="btn-measure" class="btn btn-success" disabled>MEASURE</button>
-        <button id="btn-stop-measure" class="btn btn-warning" disabled>STOP MEASURING</button>
-        <button id="btn-reset" class="btn btn-secondary">Reset</button>
+        <button id="btn-enable" class="btn btn-primary"></button>
+        <button id="btn-start" class="btn btn-primary" disabled></button>
+        <button id="btn-stop" class="btn btn-secondary" disabled></button>
+        <button id="btn-measure" class="btn btn-success" disabled></button>
+        <button id="btn-stop-measure" class="btn btn-warning" disabled></button>
+        <button id="btn-reset" class="btn btn-secondary"></button>
       </div>
     `;
 
@@ -32,6 +37,14 @@ export class Controls {
     this.measureBtn = this.container.querySelector('#btn-measure') as HTMLButtonElement;
     this.stopMeasureBtn = this.container.querySelector('#btn-stop-measure') as HTMLButtonElement;
     this.resetBtn = this.container.querySelector('#btn-reset') as HTMLButtonElement;
+  }
+
+  private updateTexts(): void {
+    this.startBtn.textContent = i18n.t('start');
+    this.stopBtn.textContent = i18n.t('stop');
+    this.measureBtn.textContent = i18n.t('measure');
+    this.stopMeasureBtn.textContent = i18n.t('stop');
+    this.resetBtn.textContent = i18n.t('reset');
   }
 
   onEnable(callback: () => void): void {
@@ -58,18 +71,18 @@ export class Controls {
     this.resetBtn.addEventListener('click', callback);
   }
 
-  updateStatus(status: SensorStatus, sessionActive: boolean): void {
+  updateStatus(status: SensorStatus, sessionActive: boolean, canMeasure: boolean = true): void {
     this.enableBtn.disabled = status.permissionGranted;
     this.startBtn.disabled = !status.permissionGranted || status.sensorsRunning;
     this.stopBtn.disabled = !status.sensorsRunning;
-    this.measureBtn.disabled = !status.sensorsRunning || sessionActive;
+    this.measureBtn.disabled = !canMeasure || sessionActive;
     this.stopMeasureBtn.disabled = !sessionActive;
     
     if (status.permissionGranted) {
-      this.enableBtn.textContent = 'Sensors Enabled';
+      this.enableBtn.textContent = i18n.t('enabled');
       this.enableBtn.classList.add('btn-success');
     } else {
-      this.enableBtn.textContent = 'Enable Sensors';
+      this.enableBtn.textContent = i18n.t('enable');
       this.enableBtn.classList.remove('btn-success');
     }
   }
