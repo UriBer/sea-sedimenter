@@ -1,0 +1,19 @@
+{
+  "name": "sea-sedimenter",
+  "version": "1.0.0",
+  "description": "IMU-based shipboard weighing measurement PWA",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:http": "VITE_HTTPS=false vite",
+    "dev:https": "VITE_HTTPS=true vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
+  },
+  "dependencies": {}
+}
+

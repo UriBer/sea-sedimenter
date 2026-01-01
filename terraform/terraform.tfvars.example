@@ -1,0 +1,16 @@
+# Copy this file to terraform.tfvars and fill in your values
+# cp terraform.tfvars.example terraform.tfvars
+
+project_id = "your-project-id-here"
+region     = "us-central1"
+service_name = "sea-sedimenter"
+image_tag    = "latest"
+
+# Set to true if you want Terraform to create a new project
+# Set to false to use an existing project
+create_project = false
+
+# Optional: Set if creating a new project
+# billing_account = "01ABCD-2EFGH3-4IJKL5"
+# org_id         = "123456789012"
+
