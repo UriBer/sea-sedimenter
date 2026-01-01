@@ -1,7 +1,8 @@
 import { SensorManager } from '../sensor/SensorManager';
 import { IMUProcessor } from '../sensor/IMUProcessor';
-import { SessionManager } from '../session/SessionManager';
-import { MeasurementCalculator } from '../measurement/MeasurementCalculator';
+import { ManualSessionManager } from '../session/ManualSessionManager';
+import { SessionCalculator } from '../measurement/SessionCalculator';
+import { RatioCalculator } from '../measurement/RatioCalculator';
 import { Controls } from './Controls';
 import { Metrics } from './Metrics';
 import { SessionView } from './SessionView';
@@ -9,39 +10,38 @@ import { ResultCard } from './ResultCard';
 import { History } from './History';
 import { LanguageSelector } from './LanguageSelector';
 import { Help } from './Help';
+import { SessionPanel } from './SessionPanel';
 import { HistoryStorage } from '../utils/storage';
 import { i18n } from '../utils/i18n';
 import { DEFAULT_CONFIG } from '../utils/config';
-import type { RawSensorData, ProcessedIMUData, LiveMetrics, MeasurementResult, Config } from '../types';
+import type { Config, SessionResult } from '../types';
 
 export class App {
   private sensorManager: SensorManager;
   private imuProcessor: IMUProcessor;
-  private sessionManager: SessionManager;
-  private calculator: MeasurementCalculator;
+  private baseSessionManager: ManualSessionManager;
+  private finalSessionManager: ManualSessionManager;
+  private sessionCalculator: SessionCalculator;
+  private ratioCalculator: RatioCalculator;
   private config: Config;
 
   // UI Components
-  private controls: Controls;
-  private metrics: Metrics;
-  private sessionView: SessionView;
-  private resultCard: ResultCard;
-  private history: History;
-  private languageSelector: LanguageSelector;
-  private help: Help;
+  private controls!: Controls;
+  private metrics!: Metrics;
+  private sessionView!: SessionView;
+  private resultCard!: ResultCard;
+  private history!: History;
+  private basePanel!: SessionPanel;
+  private finalPanel!: SessionPanel;
 
   // State
   private sensorsRunning = false;
-  private sessionActive = false;
-  private currentRawData: RawSensorData | null = null;
-  private currentProcessedData: ProcessedIMUData | null = null;
+  private baseSessionResult: SessionResult | null = null;
+  private finalSessionResult: SessionResult | null = null;
 
   // Input elements
-  private scaleInput: HTMLInputElement;
-  private sampleMassInput: HTMLInputElement;
-  private biasInput: HTMLInputElement;
-  private motionCorrectionToggle: HTMLInputElement;
-  private batchNumberInput: HTMLInputElement;
+  private batchNumberInput!: HTMLInputElement;
+  private computeResultBtn!: HTMLButtonElement;
 
   constructor() {
     this.config = { ...DEFAULT_CONFIG };
@@ -49,15 +49,13 @@ export class App {
     // Initialize managers
     this.sensorManager = new SensorManager();
     this.imuProcessor = new IMUProcessor(this.config);
-    this.sessionManager = new SessionManager(() => this.getCurrentScaleReading(), this.config);
-    this.calculator = new MeasurementCalculator(this.config);
+    this.baseSessionManager = new ManualSessionManager('base');
+    this.finalSessionManager = new ManualSessionManager('final');
+    this.sessionCalculator = new SessionCalculator(0.10);
+    this.ratioCalculator = new RatioCalculator();
 
-    // Setup IMU processor callbacks
-    this.imuProcessor.onProcessed((data) => {
-      this.currentProcessedData = data;
-      if (this.sessionActive) {
-        this.sessionManager.addIMUSample(data);
-      }
+    // Setup IMU processor callbacks (optional, for quality guidance)
+    this.imuProcessor.onProcessed(() => {
       this.updateUI();
     });
 
@@ -65,40 +63,11 @@ export class App {
       this.metrics.update(metrics);
     });
 
-    // Setup session manager callback
-    this.sessionManager.onData((sessionData) => {
-      const bias = parseFloat(this.biasInput.value) || 0;
-      const motionCorrection = this.motionCorrectionToggle.checked;
-      const result = this.calculator.compute(sessionData, bias, motionCorrection);
-      this.resultCard.setMotionCorrection(motionCorrection);
-      this.resultCard.show(result);
-      
-      // Save to history if reliable
-      if (result.isReliable) {
-        const batchNumber = this.batchNumberInput.value.trim() || HistoryStorage.getNextBatchNumber();
-        HistoryStorage.save({
-          batchNumber,
-          result,
-          scaleReading: this.getCurrentScaleReading(),
-          bias,
-          motionCorrectionEnabled: motionCorrection,
-        });
-        this.history.refresh();
-        // Auto-increment batch number for next measurement
-        // If user entered a manual number, try to increment it; otherwise use auto-generated
-        if (this.batchNumberInput.value.trim()) {
-          this.batchNumberInput.value = HistoryStorage.incrementBatchNumber(this.batchNumberInput.value);
-        } else {
-          this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
-        }
-      }
-    });
-
     // Initialize UI
     this.initializeUI();
     this.setupEventListeners();
     this.updateUI();
-    this.updateUITexts(); // Initialize translated texts
+    this.updateUITexts();
   }
 
   private initializeUI(): void {
@@ -115,33 +84,29 @@ export class App {
     const sessionContainer = document.getElementById('session-container')!;
     const resultContainer = document.getElementById('result-container')!;
     const historyContainer = document.getElementById('history-container')!;
+    const baseContainer = document.getElementById('base-session-container')!;
+    const finalContainer = document.getElementById('final-session-container')!;
 
     // Create UI components
-    this.languageSelector = new LanguageSelector(languageContainer);
-    this.help = new Help(helpContainer);
+    new LanguageSelector(languageContainer);
+    new Help(helpContainer);
     this.controls = new Controls(controlsContainer);
     this.metrics = new Metrics(metricsContainer);
     this.sessionView = new SessionView(sessionContainer);
     this.resultCard = new ResultCard(resultContainer);
     this.history = new History(historyContainer);
+    this.basePanel = new SessionPanel(baseContainer, 'base');
+    this.finalPanel = new SessionPanel(finalContainer, 'final');
 
-    // Listen for language changes to update UI
+    // Listen for language changes
     window.addEventListener('languagechange', () => {
       this.updateUITexts();
     });
 
     // Get input elements
-    this.scaleInput = document.getElementById('scale-reading') as HTMLInputElement;
-    this.sampleMassInput = document.getElementById('sample-mass') as HTMLInputElement;
-    this.biasInput = document.getElementById('bias') as HTMLInputElement;
-    this.motionCorrectionToggle = document.getElementById('motion-correction') as HTMLInputElement;
     this.batchNumberInput = document.getElementById('batch-number') as HTMLInputElement;
 
     // Set defaults
-    this.scaleInput.value = '0';
-    this.sampleMassInput.value = this.config.sample_mass_default.toString();
-    this.biasInput.value = '0';
-    this.motionCorrectionToggle.checked = true;
     this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
 
     // Setup batch number reset button
@@ -152,23 +117,189 @@ export class App {
         this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
         this.batchNumberInput.focus();
       });
-      // Update button title on language change
-      window.addEventListener('languagechange', () => {
-        resetBatchBtn.title = i18n.t('resetToAuto');
-      });
     }
+
+    // Setup base panel callbacks
+    this.setupSessionPanelCallbacks(this.basePanel, this.baseSessionManager, 'base');
+    
+    // Setup final panel callbacks
+    this.setupSessionPanelCallbacks(this.finalPanel, this.finalSessionManager, 'final');
+
+    // Add compute result button
+    this.addComputeResultButton();
 
     // Initialize history
     this.history.refresh();
   }
 
+  private setupSessionPanelCallbacks(
+    panel: SessionPanel,
+    manager: ManualSessionManager,
+    kind: 'base' | 'final'
+  ): void {
+    // Use tare callback
+    panel.onUseTare(() => {
+      // Tare is locked per session
+      this.updateUI();
+    });
+
+    // Start session callback
+    panel.onStartSession(() => {
+      const tareEstimate = panel.getLockedTareEstimate() || {
+        count: 0,
+        biasMedian: 0,
+        tareUncertainty95: 0,
+        tareSigma: 0,
+        method: 'userEntered' as const,
+      };
+
+      manager.startSession(tareEstimate.biasMedian, tareEstimate.tareUncertainty95);
+      panel.startSession(tareEstimate.biasMedian, tareEstimate.tareUncertainty95);
+      this.updateUI();
+    });
+
+    // Stop session callback
+    panel.onStopSession(() => {
+      const measurements = manager.stopSession();
+      panel.stopSession();
+
+      if (measurements.length === 0) {
+        alert(i18n.t('noMeasurementsToCalculate'));
+        if (kind === 'base') {
+          this.baseSessionResult = null;
+        } else {
+          this.finalSessionResult = null;
+        }
+        this.updateUI();
+        return;
+      }
+
+      // Calculate session result
+      const result = this.sessionCalculator.compute(measurements);
+      panel.setSessionResult(result);
+
+      if (kind === 'base') {
+        this.baseSessionResult = result;
+      } else {
+        this.finalSessionResult = result;
+      }
+
+      this.updateUI();
+      this.tryComputeRatio();
+    });
+
+    // Add measurement callback
+    panel.onAddMeasurement(() => {
+      const scaleReading = panel.getCurrentScaleReading();
+      if (scaleReading <= 0) {
+        alert(i18n.t('invalidScaleReading'));
+        return;
+      }
+
+      try {
+        manager.addMeasurement(scaleReading);
+        const measurements = manager.getMeasurements();
+        const lastMeasurement = measurements[measurements.length - 1];
+        if (lastMeasurement) {
+          panel.addMeasurement(lastMeasurement);
+        }
+        panel.clearScaleInput();
+        this.updateUI();
+      } catch (error) {
+        console.error('Error adding measurement:', error);
+        alert(error instanceof Error ? error.message : 'Failed to add measurement');
+      }
+    });
+
+    // Remove measurement callback
+    panel.onRemoveMeasurement((index) => {
+      manager.removeMeasurement(index);
+      this.updateUI();
+    });
+  }
+
+  private addComputeResultButton(): void {
+    const controlsContainer = document.getElementById('controls-container');
+    if (!controlsContainer) return;
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'compute-result-container';
+    buttonContainer.innerHTML = `
+      <button id="btn-compute-result" class="btn btn-success" disabled>${i18n.t('computeResult')}</button>
+      <button id="btn-reset-all" class="btn btn-secondary">${i18n.t('reset')}</button>
+    `;
+    controlsContainer.appendChild(buttonContainer);
+
+    this.computeResultBtn = document.getElementById('btn-compute-result') as HTMLButtonElement;
+    const resetBtn = document.getElementById('btn-reset-all') as HTMLButtonElement;
+
+    if (this.computeResultBtn) {
+      this.computeResultBtn.addEventListener('click', () => {
+        this.tryComputeRatio();
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.handleReset();
+      });
+    }
+  }
+
+  private tryComputeRatio(): void {
+    if (!this.baseSessionResult || !this.finalSessionResult) {
+      return;
+    }
+
+    if (this.baseSessionResult.fixedValue <= 0) {
+      alert(i18n.t('baseValueMustBePositive'));
+      return;
+    }
+
+    const ratioResult = this.ratioCalculator.compute(this.baseSessionResult, this.finalSessionResult);
+    this.resultCard.showRatio(ratioResult);
+
+    // Save to history
+    const batchNumber = this.batchNumberInput.value.trim() || HistoryStorage.getNextBatchNumber();
+    HistoryStorage.save({
+      batchNumber,
+      result: {
+        fixedMeasurement: ratioResult.percent,
+        confidence: Math.min(ratioResult.Wbase.confidence, ratioResult.Wfinal.confidence),
+        errorBand: ratioResult.errorBand95Percent,
+        relativeError: ratioResult.relativeErrorPercent95,
+        isReliable: ratioResult.Wbase.confidence > 0.5 && ratioResult.Wfinal.confidence > 0.5,
+        diagnostics: {
+          nTotal: ratioResult.nEff,
+          nGood: ratioResult.nEff,
+          percentGood: 100,
+          sessionRMS_az: 0,
+          sessionRMS_roll: 0,
+          sessionRMS_pitch: 0,
+          sigma_motion: 0,
+          sigma_scale: ratioResult.sigmaRatio1Sigma,
+          sigma_total: ratioResult.sigmaRatio1Sigma,
+        },
+      },
+      scaleReading: ratioResult.Wfinal.fixedValue,
+      bias: 0,
+      motionCorrectionEnabled: false,
+    });
+    this.history.refresh();
+
+    // Auto-increment batch number
+    if (this.batchNumberInput.value.trim()) {
+      this.batchNumberInput.value = HistoryStorage.incrementBatchNumber(this.batchNumberInput.value);
+    } else {
+      this.batchNumberInput.value = HistoryStorage.getNextBatchNumber();
+    }
+  }
+
   private setupEventListeners(): void {
+    // Optional IMU controls (for quality guidance)
     this.controls.onEnable(() => this.handleEnableSensors());
     this.controls.onStart(() => this.handleStartSensors());
     this.controls.onStop(() => this.handleStopSensors());
-    this.controls.onMeasure(() => this.handleStartMeasure());
-    this.controls.onStopMeasure(() => this.handleStopMeasure());
-    this.controls.onReset(() => this.handleReset());
   }
 
   private async handleEnableSensors(): Promise<void> {
@@ -176,13 +307,12 @@ export class App {
     if (status === 'granted') {
       this.updateUI();
     } else {
-      alert('Sensor permissions denied. Please enable in browser settings.');
+      alert(i18n.t('sensorPermissionsDenied'));
     }
   }
 
   private handleStartSensors(): void {
     const started = this.sensorManager.start((rawData) => {
-      this.currentRawData = rawData;
       this.imuProcessor.process(rawData);
     });
 
@@ -190,66 +320,25 @@ export class App {
       this.sensorsRunning = true;
       this.updateUI();
     } else {
-      alert('Failed to start sensors. Check permissions and device support.');
+      alert(i18n.t('failedToStartSensors'));
     }
   }
 
   private handleStopSensors(): void {
     this.sensorManager.stop();
     this.sensorsRunning = false;
-    if (this.sessionActive) {
-      this.handleStopMeasure();
-    }
-    this.updateUI();
-  }
-
-  private handleStartMeasure(): void {
-    const motionCorrectionEnabled = this.motionCorrectionToggle?.checked ?? true;
-    // If motion correction is enabled, we need sensors running
-    if (motionCorrectionEnabled && !this.sensorsRunning) return;
-    
-    this.sessionManager.start();
-    this.sessionActive = true;
-    this.resultCard.hide();
-    this.updateUI();
-    this.startSessionUpdateLoop();
-  }
-
-  private handleStopMeasure(): void {
-    if (!this.sessionActive) return;
-    const sessionData = this.sessionManager.stop();
-    this.sessionActive = false;
-    this.sessionView.update(false, 0, 0, 0);
     this.updateUI();
   }
 
   private handleReset(): void {
     this.resultCard.hide();
-    this.sessionManager.reset();
+    this.baseSessionManager.clear();
+    this.finalSessionManager.clear();
+    this.baseSessionResult = null;
+    this.finalSessionResult = null;
+    this.basePanel.setSessionResult(null);
+    this.finalPanel.setSessionResult(null);
     this.updateUI();
-  }
-
-  private startSessionUpdateLoop(): void {
-    const update = () => {
-      if (!this.sessionActive) return;
-      
-      const progress = this.sessionManager.getProgress();
-      this.sessionView.update(
-        true,
-        progress.elapsed,
-        progress.sampleCount,
-        progress.goodCount,
-        10 // target duration
-      );
-      
-      requestAnimationFrame(update);
-    };
-    requestAnimationFrame(update);
-  }
-
-  private getCurrentScaleReading(): number {
-    const value = parseFloat(this.scaleInput.value);
-    return isNaN(value) ? 0 : value;
   }
 
   private showHTTPSWarning(): void {
@@ -270,22 +359,11 @@ export class App {
     if (header) header.textContent = i18n.t('appName');
     if (subtitle) subtitle.textContent = i18n.t('subtitle');
 
-    // Update input section title
-    const inputTitle = document.getElementById('input-section-title');
-    if (inputTitle) inputTitle.textContent = i18n.t('measurementInput');
-
-    // Update input labels
+    // Update batch label
     const batchLabel = document.querySelector('label[for="batch-number"]');
-    const scaleLabel = document.querySelector('label[for="scale-reading"]');
-    const sampleMassLabel = document.querySelector('label[for="sample-mass"]');
-    const biasLabel = document.querySelector('label[for="bias"]');
-    const motionLabel = document.querySelector('label[for="motion-correction"]');
-    const batchInput = document.getElementById('batch-number') as HTMLInputElement;
-    
     if (batchLabel) batchLabel.textContent = i18n.t('batchNumber');
-    if (scaleLabel) scaleLabel.textContent = i18n.t('scaleReading');
-    if (sampleMassLabel) sampleMassLabel.textContent = i18n.t('baseSampleWeight');
-    if (biasLabel) biasLabel.textContent = i18n.t('biasTare');
+    
+    const batchInput = document.getElementById('batch-number') as HTMLInputElement;
     if (batchInput) {
       batchInput.placeholder = i18n.t('autoGenerated');
     }
@@ -293,31 +371,20 @@ export class App {
     if (resetBatchBtn) {
       resetBatchBtn.title = i18n.t('resetToAuto');
     }
-    if (motionLabel) {
-      const checkbox = document.getElementById('motion-correction') as HTMLInputElement;
-      const isChecked = checkbox?.checked || false;
-      motionLabel.innerHTML = `<input type="checkbox" id="motion-correction" ${isChecked ? 'checked' : ''}> ${i18n.t('motionCorrection')}`;
-      // Re-attach event listener if needed
-      const newCheckbox = document.getElementById('motion-correction') as HTMLInputElement;
-      if (newCheckbox && this.motionCorrectionToggle) {
-        newCheckbox.checked = isChecked;
-      }
-    }
   }
 
   private updateUI(): void {
     const status = this.sensorManager.getStatus();
-    // Allow MEASURE button when motion correction is disabled, even without sensors
-    const motionCorrectionEnabled = this.motionCorrectionToggle?.checked ?? true;
-    const canMeasure = status.sensorsRunning || !motionCorrectionEnabled;
-    this.controls.updateStatus(status, this.sessionActive, canMeasure);
+    this.controls.updateStatus(status, false, false, false);
+    
+    // Update compute result button
+    if (this.computeResultBtn) {
+      this.computeResultBtn.disabled = !(this.baseSessionResult && this.finalSessionResult);
+    }
     
     if (!this.sensorsRunning) {
       this.metrics.update(null);
       this.sessionView.update(false, 0, 0, 0);
-    } else if (!this.sessionActive) {
-      this.sessionView.update(false, 0, 0, 0);
     }
   }
 }
-

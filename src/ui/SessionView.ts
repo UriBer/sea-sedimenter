@@ -2,10 +2,10 @@ import { i18n } from '../utils/i18n';
 
 export class SessionView {
   private container: HTMLElement;
-  private statusEl: HTMLElement;
-  private elapsedEl: HTMLElement;
-  private progressEl: HTMLElement;
-  private qualityEl: HTMLElement;
+  private statusEl!: HTMLElement;
+  private elapsedEl!: HTMLElement;
+  private progressEl!: HTMLElement;
+  private qualityEl!: HTMLElement;
   private samplesEl: HTMLElement | null = null;
   private goodEl: HTMLElement | null = null;
 

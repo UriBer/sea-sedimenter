@@ -933,3 +933,248 @@ body {
 [dir="rtl"] .footer-links {
   flex-direction: row-reverse;
 }
+
+/* Tare Panel */
+.tare-panel {
+  margin-bottom: 1rem;
+}
+
+.tare-input-group {
+  margin-bottom: 1rem;
+}
+
+.tare-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.tare-input-row input {
+  flex: 1;
+}
+
+.tare-samples-list {
+  margin: 1rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tare-sample-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: var(--sea-foam);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.tare-estimate {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--sea-pale);
+  border-radius: 8px;
+}
+
+.tare-estimate-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tare-count {
+  font-size: 0.875rem;
+  color: var(--text-medium);
+}
+
+.tare-warning {
+  color: var(--coral);
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.tare-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tare-manual-override {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sea-pale);
+}
+
+.tare-manual-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+/* Simple Measurement Input */
+.simple-measurement-panel {
+  margin-bottom: 1rem;
+}
+
+.measurement-session-info {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--sea-foam);
+  border-radius: 6px;
+}
+
+.session-bias-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.measurement-input-group {
+  margin-bottom: 1rem;
+}
+
+.measurement-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.measurement-input-row input {
+  flex: 1;
+}
+
+.measurements-list {
+  margin: 1rem 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.measurement-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--sea-foam);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.measurement-entry-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+}
+
+.measurement-number {
+  font-weight: 600;
+  color: var(--sea-medium);
+}
+
+.measurement-details {
+  flex: 1;
+}
+
+.measurement-tare-unc {
+  font-size: 0.875rem;
+  color: var(--text-medium);
+}
+
+.measurement-status {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: var(--sea-pale);
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.measurements-empty,
+.tare-empty {
+  text-align: center;
+  color: var(--text-light);
+  padding: 1rem;
+  font-style: italic;
+}
+
+/* Result Notes */
+.result-notes {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--sand);
+  border-radius: 6px;
+}
+
+.result-notes ul {
+  margin: 0.5rem 0 0 1.5rem;
+  padding: 0;
+}
+
+.result-notes li {
+  margin: 0.25rem 0;
+}
+
+[dir="rtl"] .result-notes ul {
+  margin-right: 1.5rem;
+  margin-left: 0;
+}
+
+/* Session Panel */
+.session-panel {
+  margin-bottom: 1.5rem;
+}
+
+.tare-section {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--sea-foam);
+  border-radius: 8px;
+}
+
+.session-info {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: var(--sea-pale);
+  border-radius: 6px;
+}
+
+.session-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.session-result-summary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--sand);
+  border-radius: 8px;
+}
+
+.session-result-content h4 {
+  margin-top: 0;
+  color: var(--sea-medium);
+}
+
+.compute-result-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: center;
+}
+
+.diagnostics-section {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--sea-foam);
+  border-radius: 6px;
+}
+
+.diagnostics-section h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: var(--sea-medium);
+}

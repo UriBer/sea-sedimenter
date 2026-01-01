@@ -16,16 +16,24 @@ export class SensorManager {
    * Request permissions (required on iOS)
    */
   async requestPermissions(): Promise<PermissionStatus> {
-    if (typeof DeviceMotionEvent === 'undefined' || !DeviceMotionEvent.requestPermission) {
+    // TypeScript doesn't know about requestPermission, so we need to check at runtime
+    const DeviceMotionEventWithPermission = DeviceMotionEvent as typeof DeviceMotionEvent & {
+      requestPermission?: () => Promise<PermissionStatus>;
+    };
+    const DeviceOrientationEventWithPermission = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<PermissionStatus>;
+    };
+
+    if (typeof DeviceMotionEvent === 'undefined' || !DeviceMotionEventWithPermission.requestPermission) {
       // Android Chrome or unsupported
       this.permissionStatus = 'granted';
       return 'granted';
     }
 
     try {
-      const motionPermission = await DeviceMotionEvent.requestPermission();
-      const orientationPermission = DeviceOrientationEvent.requestPermission
-        ? await DeviceOrientationEvent.requestPermission()
+      const motionPermission = await DeviceMotionEventWithPermission.requestPermission();
+      const orientationPermission = DeviceOrientationEventWithPermission.requestPermission
+        ? await DeviceOrientationEventWithPermission.requestPermission()
         : 'granted';
 
       if (motionPermission === 'granted' && orientationPermission === 'granted') {

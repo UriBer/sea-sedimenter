@@ -122,3 +122,71 @@ export interface MeasurementHistoryEntry {
   motionCorrectionEnabled: boolean;
 }
 
+// Tare management types
+export interface TareSample {
+  timestamp: number;
+  tareReading: number; // grams
+}
+
+export interface TareEstimate {
+  count: number;
+  biasMedian: number; // b (grams)
+  tareUncertainty95: number; // T95 (grams, 95% confidence)
+  tareSigma: number; // T = T95/2 (1σ equivalent)
+  method: 'halfRange' | 'userEntered';
+}
+
+// Manual measurement types for base/final sessions
+export type SessionKind = 'base' | 'final';
+
+export interface ManualMeasurement {
+  timestamp: number;
+  kind: SessionKind;
+  scaleReading: number; // grams raw
+  bias: number; // grams b (locked at session time)
+  tareUncertainty95: number; // ±g 95% (locked)
+  correctedValue: number; // grams = scaleReading - bias
+}
+
+export interface SessionResult {
+  kind: SessionKind;
+  measurements: ManualMeasurement[];
+  nTotal: number;
+  nTrim: number;
+  trimFraction: number;
+
+  bias: number;
+  tareUncertainty95: number; // T95 used
+  tareSigma: number; // T = T95/2
+
+  mean: number;
+  median: number;
+  trimmedMean: number;
+  fixedValue: number; // choose trimmedMean if nTrim>=3 else median
+
+  stdDev: number; // sample std dev of corrected values (after trimming)
+  stdError: number; // SE = stdDev / sqrt(nTrim)
+  totalUncertainty1Sigma: number; // sqrt(SE^2 + T^2)
+  errorBand95: number; // k(nTrim) * totalUncertainty1Sigma
+  confidence: number; // 0..1 based on nTrim
+  k95: number; // interpolated k-factor used
+  notes?: string[];
+}
+
+export interface RatioResult {
+  Wbase: SessionResult;
+  Wfinal: SessionResult;
+
+  ratio: number; // (Wb - Wf)/Wb
+  percent: number; // 100*ratio
+
+  // uncertainty propagation
+  sigmaRatio1Sigma: number;
+  errorBand95Ratio: number;
+  errorBand95Percent: number;
+  relativeErrorPercent95: number; // optional
+  k95: number; // interpolated factor used
+  nEff: number; // effective n used for k interpolation
+  notes?: string[];
+}
+

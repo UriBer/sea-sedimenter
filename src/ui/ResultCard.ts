@@ -1,4 +1,4 @@
-import type { MeasurementResult } from '../types';
+import type { MeasurementResult, SimpleMeasurementResult, RatioResult } from '../types';
 import { i18n } from '../utils/i18n';
 
 export class ResultCard {
@@ -85,6 +85,94 @@ export class ResultCard {
     if (!result.isReliable) {
       warning.style.display = 'block';
       warning.textContent = i18n.t('warning');
+      warning.className = 'result-warning warning';
+    } else {
+      warning.style.display = 'none';
+    }
+  }
+
+  // Removed showSimple - using showRatio instead
+  //   // showSimple method removed - using showRatio instead for base/final workflow
+
+  showRatio(result: RatioResult | null): void {
+    const card = this.container.querySelector('#result-card') as HTMLElement;
+    const main = this.container.querySelector('#result-main') as HTMLElement;
+    const confidence = this.container.querySelector('#result-confidence') as HTMLElement;
+    const diagnostics = this.container.querySelector('#result-diagnostics') as HTMLElement;
+    const warning = this.container.querySelector('#result-warning') as HTMLElement;
+
+    if (!result || result.Wbase.nTotal === 0 || result.Wfinal.nTotal === 0) {
+      card.style.display = 'none';
+      this.visible = false;
+      return;
+    }
+
+    card.style.display = 'block';
+    this.visible = true;
+
+    const valueEl = main.querySelector('.result-value') as HTMLElement;
+    const errorEl = main.querySelector('.result-error') as HTMLElement;
+    const relativeEl = main.querySelector('.result-relative') as HTMLElement;
+
+    // Main result: percent change
+    valueEl.textContent = `${result.percent.toFixed(2)}${i18n.t('percent')}`;
+    errorEl.textContent = `± ${result.errorBand95Percent.toFixed(2)}${i18n.t('percent')} (95%)`;
+    relativeEl.textContent = `Ratio: ${result.ratio.toFixed(4)} ± ${result.errorBand95Ratio.toFixed(4)}`;
+
+    confidence.textContent = `${i18n.t('confidence')}: k=${result.k95.toFixed(2)}, n_eff=${result.nEff}`;
+
+    const correctionStatus = this.container.querySelector('#result-correction-status') as HTMLElement;
+    if (correctionStatus) {
+      correctionStatus.innerHTML = `<span class="correction-badge correction-no">${i18n.t('relativeChange')}</span>`;
+    }
+
+    // Build diagnostics
+    const diagnosticsContent = `
+      <details open>
+        <summary>${i18n.t('diagnostics')}</summary>
+        <div class="diagnostics-grid">
+          <div class="diagnostics-section">
+            <h4>${i18n.t('baseSession')}</h4>
+            <div><strong>${i18n.t('fixedValue')}:</strong> ${result.Wbase.fixedValue.toFixed(2)} ${i18n.t('grams')}</div>
+            <div><strong>${i18n.t('errorBand95')}:</strong> ±${result.Wbase.errorBand95.toFixed(2)} ${i18n.t('grams')} (95%)</div>
+            <div><strong>${i18n.t('basedOnMeasurements')}:</strong> ${result.Wbase.nTrim} (k=${result.Wbase.k95.toFixed(2)})</div>
+            <div><strong>${i18n.t('biasTare')}:</strong> ${result.Wbase.bias.toFixed(2)} ${i18n.t('grams')}</div>
+            <div><strong>${i18n.t('tareUncertainty95')}:</strong> ±${result.Wbase.tareUncertainty95.toFixed(2)} ${i18n.t('grams')}</div>
+          </div>
+          <div class="diagnostics-section">
+            <h4>${i18n.t('finalSession')}</h4>
+            <div><strong>${i18n.t('fixedValue')}:</strong> ${result.Wfinal.fixedValue.toFixed(2)} ${i18n.t('grams')}</div>
+            <div><strong>${i18n.t('errorBand95')}:</strong> ±${result.Wfinal.errorBand95.toFixed(2)} ${i18n.t('grams')} (95%)</div>
+            <div><strong>${i18n.t('basedOnMeasurements')}:</strong> ${result.Wfinal.nTrim} (k=${result.Wfinal.k95.toFixed(2)})</div>
+            <div><strong>${i18n.t('biasTare')}:</strong> ${result.Wfinal.bias.toFixed(2)} ${i18n.t('grams')}</div>
+            <div><strong>${i18n.t('tareUncertainty95')}:</strong> ±${result.Wfinal.tareUncertainty95.toFixed(2)} ${i18n.t('grams')}</div>
+          </div>
+          <div class="diagnostics-section">
+            <h4>${i18n.t('ratioCalculation')}</h4>
+            <div><strong>${i18n.t('ratio')}:</strong> ${result.ratio.toFixed(4)}</div>
+            <div><strong>${i18n.t('percent')}:</strong> ${result.percent.toFixed(2)}%</div>
+            <div><strong>${i18n.t('sigmaRatio1Sigma')}:</strong> ${result.sigmaRatio1Sigma.toFixed(4)}</div>
+            <div><strong>${i18n.t('errorBand95Percent')}:</strong> ±${result.errorBand95Percent.toFixed(2)}%</div>
+            <div><strong>k-factor:</strong> ${result.k95.toFixed(2)} (n_eff=${result.nEff})</div>
+          </div>
+        </div>
+        ${result.notes && result.notes.length > 0 ? `
+          <div class="result-notes">
+            <strong>${i18n.t('notes')}:</strong>
+            <ul>
+              ${result.notes.map(note => `<li>${note}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </details>
+    `;
+
+    diagnostics.innerHTML = diagnosticsContent;
+
+    // Show warnings if any
+    if (result.notes && result.notes.length > 0) {
+      warning.style.display = 'block';
+      warning.textContent = result.notes.join('; ');
       warning.className = 'result-warning warning';
     } else {
       warning.style.display = 'none';

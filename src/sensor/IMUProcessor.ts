@@ -1,6 +1,6 @@
 import type { RawSensorData, ProcessedIMUData, LiveMetrics, Config, Vector3 } from '../types';
 import { RingBuffer } from '../session/RingBuffer';
-import { dotProduct, normalize, magnitude, radToDeg } from '../utils/math';
+import { dotProduct, normalize, radToDeg } from '../utils/math';
 import { DEFAULT_CONFIG } from '../utils/config';
 
 export type ProcessedDataCallback = (data: ProcessedIMUData) => void;
@@ -184,6 +184,51 @@ export class IMUProcessor {
    */
   onMetrics(callback: MetricsCallback): void {
     this.metricsCallback = callback;
+  }
+
+  /**
+   * Get current metrics (for quality snapshot)
+   */
+  getCurrentMetrics(): LiveMetrics | null {
+    if (!this.initialized) return null;
+
+    const azValues = this.azBuffer.getValues();
+    const rollValues = this.rollBuffer.getValues();
+    const pitchValues = this.pitchBuffer.getValues();
+
+    if (azValues.length === 0) return null;
+
+    const rms_az = this.azBuffer.getRMS();
+    const rms_roll = this.rollBuffer.getRMS();
+    const rms_pitch = this.pitchBuffer.getRMS();
+
+    // Estimate sampling rate
+    let samplingRate = 0;
+    if (this.sampleIntervals.length > 0) {
+      const avgInterval = this.sampleIntervals.reduce((a, b) => a + b, 0) / this.sampleIntervals.length;
+      samplingRate = avgInterval > 0 ? 1000 / avgInterval : 0;
+    }
+
+    // Check stability
+    const isStable =
+      rms_az < this.config.T_az_rms &&
+      rms_roll < this.config.T_roll_rms &&
+      rms_pitch < this.config.T_pitch_rms;
+
+    // Compute confidence (simplified)
+    const confidence = isStable ? 0.8 : 0.4;
+
+    return {
+      a_z: azValues[azValues.length - 1] || 0,
+      roll: rollValues[rollValues.length - 1] || 0,
+      pitch: pitchValues[pitchValues.length - 1] || 0,
+      rms_az,
+      rms_roll,
+      rms_pitch,
+      samplingRate,
+      isStable,
+      confidence,
+    };
   }
 
   /**

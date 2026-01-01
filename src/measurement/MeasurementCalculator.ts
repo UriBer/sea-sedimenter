@@ -60,7 +60,6 @@ export class MeasurementCalculator {
     }
 
     // Step 3: Filter to "good" samples (hard filter)
-    const goodSamples = sessionData.samples.filter(s => s.isGood);
     const goodCorrectedReadings: number[] = [];
     
     for (let i = 0; i < sessionData.samples.length && i < correctedReadings.length; i++) {

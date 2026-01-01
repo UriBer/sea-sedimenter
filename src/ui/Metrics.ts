@@ -3,14 +3,14 @@ import { i18n } from '../utils/i18n';
 
 export class Metrics {
   private container: HTMLElement;
-  private a_zEl: HTMLElement;
-  private rollEl: HTMLElement;
-  private pitchEl: HTMLElement;
-  private rms_azEl: HTMLElement;
-  private rms_rollEl: HTMLElement;
-  private rms_pitchEl: HTMLElement;
-  private samplingRateEl: HTMLElement;
-  private stabilityBadge: HTMLElement;
+  private a_zEl!: HTMLElement;
+  private rollEl!: HTMLElement;
+  private pitchEl!: HTMLElement;
+  private rms_azEl!: HTMLElement;
+  private rms_rollEl!: HTMLElement;
+  private rms_pitchEl!: HTMLElement;
+  private samplingRateEl!: HTMLElement;
+  private stabilityBadge!: HTMLElement;
   private confidenceEl: HTMLElement;
 
   constructor(container: HTMLElement) {

@@ -2,7 +2,7 @@ import { i18n, type Language } from '../utils/i18n';
 
 export class LanguageSelector {
   private container: HTMLElement;
-  private select: HTMLSelectElement;
+  private select!: HTMLSelectElement;
 
   constructor(container: HTMLElement) {
     this.container = container;

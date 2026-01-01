@@ -66,7 +66,9 @@ export class Help {
       this.modal.remove();
     }
 
-    this.modal = document.createElement('div');
+    if (!this.modal) {
+      this.modal = document.createElement('div');
+    }
     this.modal.className = 'help-modal-overlay';
     this.modal.innerHTML = `
       <div class="help-modal">

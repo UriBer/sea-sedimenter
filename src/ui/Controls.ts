@@ -3,12 +3,12 @@ import { i18n } from '../utils/i18n';
 
 export class Controls {
   private container: HTMLElement;
-  private enableBtn: HTMLButtonElement;
-  private startBtn: HTMLButtonElement;
-  private stopBtn: HTMLButtonElement;
-  private measureBtn: HTMLButtonElement;
-  private stopMeasureBtn: HTMLButtonElement;
-  private resetBtn: HTMLButtonElement;
+  private enableBtn!: HTMLButtonElement;
+  private startBtn!: HTMLButtonElement;
+  private stopBtn!: HTMLButtonElement;
+  private measureBtn!: HTMLButtonElement;
+  private stopMeasureBtn!: HTMLButtonElement;
+  private resetBtn!: HTMLButtonElement;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -40,10 +40,11 @@ export class Controls {
   }
 
   private updateTexts(): void {
+    this.enableBtn.textContent = i18n.t('enable');
     this.startBtn.textContent = i18n.t('start');
     this.stopBtn.textContent = i18n.t('stop');
     this.measureBtn.textContent = i18n.t('measure');
-    this.stopMeasureBtn.textContent = i18n.t('stop');
+    this.stopMeasureBtn.textContent = i18n.t('stopMeasuring');
     this.resetBtn.textContent = i18n.t('reset');
   }
 
@@ -71,12 +72,12 @@ export class Controls {
     this.resetBtn.addEventListener('click', callback);
   }
 
-  updateStatus(status: SensorStatus, sessionActive: boolean, canMeasure: boolean = true): void {
+  updateStatus(status: SensorStatus, sessionActive: boolean, canMeasure: boolean = true, canStop: boolean = false): void {
     this.enableBtn.disabled = status.permissionGranted;
     this.startBtn.disabled = !status.permissionGranted || status.sensorsRunning;
     this.stopBtn.disabled = !status.sensorsRunning;
     this.measureBtn.disabled = !canMeasure || sessionActive;
-    this.stopMeasureBtn.disabled = !sessionActive;
+    this.stopMeasureBtn.disabled = !sessionActive || !canStop;
     
     if (status.permissionGranted) {
       this.enableBtn.textContent = i18n.t('enabled');

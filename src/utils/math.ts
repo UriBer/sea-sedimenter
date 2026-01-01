@@ -10,12 +10,22 @@ export function rms(values: number[]): number {
 }
 
 /**
- * Calculate standard deviation
+ * Calculate standard deviation (population)
  */
 export function stdDev(values: number[]): number {
   if (values.length === 0) return 0;
   const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
   const variance = values.reduce((sum, val) => sum + (val - mean) ** 2, 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+/**
+ * Calculate sample standard deviation (with n-1 denominator)
+ */
+export function sampleStdDev(values: number[]): number {
+  if (values.length <= 1) return 0;
+  const m = mean(values);
+  const variance = values.reduce((sum, val) => sum + (val - m) ** 2, 0) / (values.length - 1);
   return Math.sqrt(variance);
 }
 

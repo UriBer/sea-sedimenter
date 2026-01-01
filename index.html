@@ -22,9 +22,14 @@
     <div id="controls-container" class="controls-wrapper"></div>
 
     <div class="main-content">
-      <!-- Input Section -->
+      <!-- Base Session Panel -->
+      <section id="base-session-container"></section>
+
+      <!-- Final Session Panel -->
+      <section id="final-session-container"></section>
+
+      <!-- Batch Number (for history) -->
       <section class="input-card">
-        <h2 id="input-section-title">📝 Measurement Input</h2>
         <div class="input-row">
           <label for="batch-number">Batch Number</label>
           <div class="batch-input-group">
@@ -32,29 +37,9 @@
             <button id="btn-reset-batch" class="btn-icon-small" title="Reset to auto-generated">🔄</button>
           </div>
         </div>
-        <div class="input-row">
-          <label for="scale-reading">Scale Reading (g)</label>
-          <input type="number" id="scale-reading" step="0.01" placeholder="0.00" class="input-large">
-        </div>
-        <div class="input-row-group">
-          <div class="input-row">
-            <label for="sample-mass">Base Sample Weight (g)</label>
-            <input type="number" id="sample-mass" step="0.01" value="150">
-          </div>
-          <div class="input-row">
-            <label for="bias">Bias/Tare (g)</label>
-            <input type="number" id="bias" step="0.01" value="0">
-          </div>
-        </div>
-        <div class="input-row">
-          <label for="motion-correction">
-            <input type="checkbox" id="motion-correction" checked>
-            Motion Correction
-          </label>
-        </div>
       </section>
 
-      <!-- Status & Metrics -->
+      <!-- Status & Metrics (Optional IMU) -->
       <section class="status-card">
         <div id="metrics-container"></div>
         <div id="session-container"></div>
